@@ -1,14 +1,305 @@
 import React, { useState, useRef, useEffect } from "react";
-import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { Chart } from '@antv/g2';
 import { motion } from 'framer-motion';
-import { analyzeData } from '../services/api';
-import "./Home.css";
+import Draggable from 'react-draggable';
+import { Auto } from '@antv/g2-extension-ava';
+import './Home.css';
+
+// 科技背景动画组件
+// const TechBackground = () => {
+//   const [lines, setLines] = useState([]);
+
+//   useEffect(() => {
+//       const generateLines = () => {
+//           const lineCount = 20;
+//           const newLines = Array.from({ length: lineCount }, (_, index) => ({
+//               id: index,
+//               x1: Math.random() * 100,
+//               y1: Math.random() * 100,
+//               x2: Math.random() * 100,
+//               y2: Math.random() * 100,
+//               color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+//               duration: Math.random() * 10 + 5
+//           }));
+//           setLines(newLines);
+//       };
+
+//       generateLines();
+//       const interval = setInterval(generateLines, 5000);
+//       return () => clearInterval(interval);
+//   }, []);
+
+//   return (
+//       <svg className="tech-background" style={{position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: -1}}>
+//           {lines.map(line => (
+//               <motion.line
+//                   key={line.id}
+//                   x1={`${line.x1}%`}
+//                   y1={`${line.y1}%`}
+//                   x2={`${line.x2}%`}
+//                   y2={`${line.y2}%`}
+//                   stroke={line.color}
+//                   strokeWidth="1"
+//                   strokeOpacity="0.5"
+//                   animate={{
+//                       x1: [line.x1, line.x2, line.x1],
+//                       y1: [line.y1, line.y2, line.y1],
+//                       strokeOpacity: [0.3, 0.7, 0.3]
+//                   }}
+//                   transition={{
+//                       duration: line.duration,
+//                       repeat: Infinity,
+//                       ease: "easeInOut"
+//                   }}
+//               />
+//           ))}
+//       </svg>
+//   );
+// };
+
+// 说明侧边栏组件
+const SideBar = ({ side }) => {
+  const content = {
+      left: {
+          title: "数据可视化助手",
+          description: [
+              "• 轻松转换销售数据为直观图表",
+              "• 支持长条图、饼图、折线图、散点图",
+              "• 实时分析，快速洞察业务趋势",
+              "• 交互式界面，操作简单直观"
+          ]
+      },
+      right: {
+          title: "功能特点",
+          description: [
+              "• 智能图表生成",
+              "• 多维度数据展示",
+              "• 响应式设计",
+              "• 科技感交互体验"
+          ]
+      }
+  };
+
+  return (
+      <div className={`sidebar ${side}-sidebar`}>
+          <h3>{content[side].title}</h3>
+          {content[side].description.map((item, index) => (
+              <p key={index}>{item}</p>
+          ))}
+      </div>
+  );
+};
 
 function Home() {
     const [userQuery, setUserQuery] = useState("");
     const [messages, setMessages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
+    const [position, setPosition] = useState({ x: 0, y: 0 });
     const chatDisplayRef = useRef(null);
+    const chartRef = useRef(null);
+
+    // 预定义销售数据
+    const salesData = [
+        {'client_id': 1, 'total_amount': 9423.0}, 
+        {'client_id': 2, 'total_amount': 8992.0}, 
+        {'client_id': 3, 'total_amount': 5185.0},
+        {'client_id': 4, 'total_amount': 7256.0}, 
+        {'client_id': 5, 'total_amount': 5847.0},
+        {'client_id': 6, 'total_amount': 6982.0},
+        {'client_id': 7, 'total_amount': 8321.0},
+        {'client_id': 8, 'total_amount': 7492.0},
+        {'client_id': 9, 'total_amount': 9213.0},
+        {'client_id': 10, 'total_amount': 6178.0},
+        {'client_id': 11, 'total_amount': 8153.0},
+        {'client_id': 12, 'total_amount': 6782.0},
+        {'client_id': 13, 'total_amount': 7512.0},
+        {'client_id': 14, 'total_amount': 6482.0},
+        {'client_id': 15, 'total_amount': 8123.0},
+        {'client_id': 16, 'total_amount': 6982.0},
+        {'client_id': 17, 'total_amount': 7321.0},
+        {'client_id': 18, 'total_amount': 6492.0},
+        {'client_id': 19, 'total_amount': 7213.0},
+        {'client_id': 20, 'total_amount': 6178.0}
+    ];
+
+    const renderBarChart = (data) => {
+        if (chartRef.current) {
+            chartRef.current.innerHTML = ''; // 清空之前的图表
+            const chart = new Chart({
+                container: chartRef.current,
+                width: 600,
+                height: 250,
+                autoFit: true
+            });
+
+            chart
+                .interval()
+                .data(data)
+                .encode('x', 'client_id')
+                .encode('y', 'total_amount')
+                .style('fillOpacity', 0.5)
+                .style('fill', '#0c255d')
+                .axis('x', { title: '客户ID' })
+                .axis('y', { title: '总金额' });
+            
+            chart.render();
+        }
+    };
+
+    const renderPieChart = (data) => {
+        if (chartRef.current) {
+            chartRef.current.innerHTML = ''; // 清空之前的图表
+            const chart = new Chart({
+                container: chartRef.current,
+                height: 400,
+                width: 600,
+                autoFit: true
+            });
+    
+            // 计算总金额
+            const totalAmount = data.reduce((sum, item) => sum + item.total_amount, 0);
+    
+            // 转换数据
+            const processedData = data.map(item => ({
+                name: `客户 ${item.client_id}`,
+                value: item.total_amount,
+                percentage: ((item.total_amount / totalAmount) * 100).toFixed(2)
+            }));
+    
+            chart.coordinate({ type: 'theta' });
+    
+            chart
+                .interval()
+                .transform({ type: 'stackY' })
+                .data(processedData)
+                .encode('y', 'value')
+                .encode('color', 'name')
+                .style('stroke', 'white')
+                .scale('color', {
+                    palette: [
+                        '#a3c8e8', '#9dcce4', '#97c0e0', '#91b4db', '#8bb8d6',
+                        '#85bdce', '#7fb3c2', '#79adba', '#73a7b2', '#6ca1ad',
+                        '#669baa', '#5f95a7', '#588fa4', '#5189a1', '#4a839e',
+                        '#437da5', '#3c77af', '#3571b9', '#2e6bb3', '#2765ad'
+                    ],
+                    offset: (t) => t * 0.8 + 0.1, 
+                })
+                .label({
+                    text: 'name',
+                    radius: 0.8,
+                    fontSize: 10,
+                    fontWeight: 'bold',
+                    style: {
+                        fill: '#fff'
+                    }
+                })
+                .tooltip({
+                    title: '客户销售额分布',
+                    items: [
+                        { field: 'name', alias: '客户' },
+                        { field: 'value', alias: '销售额' },
+                        { field: 'percentage', alias: '占比' }
+                    ]
+                })
+                .animate('enter', { type: 'waveIn' })
+                .legend(false);
+    
+            chart.render();
+        }
+    };
+
+    const renderLineChart = (data) => {
+        if (chartRef.current) {
+            chartRef.current.innerHTML = ''; // 清空之前的图表
+            const chart = new Chart({
+                container: chartRef.current,
+                width: 600,
+                height: 250,
+                autoFit: true
+            });
+
+            chart
+                .line()
+                .data(data)
+                .encode('x', 'client_id')
+                .encode('y', 'total_amount')
+                .style('stroke', '#437da5')
+                .style('lineWidth', 2)
+                .axis('x', { title: '客户ID' })
+                .axis('y', { title: '总金额' });
+            
+            chart.render();
+        }
+    };
+
+    const renderScatterPlot = (data) => {
+        if (chartRef.current) {
+            chartRef.current.innerHTML = ''; // 清空之前的图表
+            const chart = new Chart({
+                container: chartRef.current,
+                width: 600,
+                height: 400,
+                autoFit: true
+            });
+    
+            // 准备散点图数据
+            const processedData = data.map(item => ({
+                x: item.client_id,
+                y: item.total_amount,
+                type: item.client_id % 2 === 0 ? '偶数客户' : '奇数客户'
+            }));
+    
+            chart
+                .mark(Auto)
+                .data(processedData)
+                .encode('color', 'type')
+                .axis('x', { 
+                    title: '客户ID',
+                    label: {
+                        style: {
+                            fill: '#fff'
+                        }
+                    }
+                })
+                .axis('y', { 
+                    title: '销售额',
+                    label: {
+                        style: {
+                            fill: '#fff'
+                        }
+                    }
+                })
+                .tooltip({
+                    title: '客户销售分布',
+                    items: [
+                        { field: 'x', alias: '客户ID' },
+                        { field: 'y', alias: '销售额' },
+                        { field: 'type', alias: '客户类型' }
+                    ]
+                });
+    
+            chart.render();
+        }
+    };
+
+    const renderChart = (data, chartType) => {
+        switch(chartType) {
+            case 'barChart':
+                renderBarChart(data);
+                break;
+            case 'pieChart':
+                renderPieChart(data);
+                break;
+            case 'lineChart':
+                renderLineChart(data);
+                break;
+            case 'scatterPlot':
+                renderScatterPlot(data);
+                break;
+            default:
+                renderBarChart(data);
+        }
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -23,28 +314,45 @@ function Home() {
         setUserQuery("");
         setIsLoading(true);
 
-        try {
-            const result = await analyzeData(userQuery);
-            
-            const abbyMessage = {
-                text: result.analysis,
+        setTimeout(() => {
+            let responseMessage = {
                 type: 'abby',
-                data: result.data,
-                chartType: result.data.length > 0 ? 'line' : null
+                data: salesData
             };
 
-            setMessages(prevMessages => [...prevMessages, abbyMessage]);
-        } catch (error) {
-            console.error("Error:", error);
-            const errorMessage = {
-                text: error.response?.data?.detail || "系統異常，請稍後再試。",
-                type: 'abby'
-            };
-            setMessages(prevMessages => [...prevMessages, errorMessage]);
-        } finally {
+            switch(userQuery.trim()) {
+                case '长条图':
+                    responseMessage.text = "销售数据长条图";
+                    responseMessage.chartType = 'barChart';
+                    break;
+                case '饼图':
+                    responseMessage.text = "销售数据饼图";
+                    responseMessage.chartType = 'pieChart';
+                    break;
+                case '折线图':
+                    responseMessage.text = "销售数据折线图";
+                    responseMessage.chartType = 'lineChart';
+                    break;
+                case '散点图':
+                    responseMessage.text = "销售数据散点图";
+                    responseMessage.chartType = 'scatterPlot';
+                    break;
+                default:
+                    responseMessage.text = "未知的查询类型";
+                    responseMessage.chartType = null;
+            }
+
+            setMessages(prevMessages => [...prevMessages, responseMessage]);
             setIsLoading(false);
-        }
+        }, 500);
     };
+
+    useEffect(() => {
+        const lastMessage = messages[messages.length - 1];
+        if (lastMessage && lastMessage.data && lastMessage.chartType) {
+            renderChart(lastMessage.data, lastMessage.chartType);
+        }
+    }, [messages]);
 
     useEffect(() => {
         if (chatDisplayRef.current) {
@@ -52,96 +360,75 @@ function Home() {
         }
     }, [messages]);
 
-    const renderChart = (data) => {
-        return (
-            <ResponsiveContainer width="100%" height={250}>
-                <LineChart data={data}>
-                    <XAxis dataKey="client_id" />
-                    <YAxis />
-                    <Tooltip />
-                    <Line 
-                        type="monotone" 
-                        dataKey="total_amount" 
-                        stroke="#8884d8" 
-                        strokeWidth={3}
-                        activeDot={{ r: 8 }}
-                    />
-                </LineChart>
-            </ResponsiveContainer>
-        );
+    const handleDrag = (e, data) => {
+        setPosition({ x: data.x, y: data.y });
     };
 
     return (
-        <motion.div 
-            className="home-container"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
+        <div className="app-container">
+        {/* <TechBackground /> */}
+        <SideBar side="left" />
+        <Draggable 
+            handle=".chat-header"
+            defaultPosition={{x: 0, y: 0}}
+            position={position}
+            onDrag={handleDrag}
         >
-            <div className="chat-window">
-                <div className="chat-header">
-                    <div className="status-indicator"></div>
-                    <div className="app-name">Abby 智能分析</div>
-                </div>
-                <div className="chat-display" ref={chatDisplayRef}>
-                    {messages.map((msg, index) => (
-                        <motion.div 
-                            key={index} 
-                            className={`message ${msg.type}-message`}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.3 }}
-                        >
-                            <div className="message-text">{msg.text}</div>
-                            {msg.data && msg.data.length > 0 && (
-                                <>
-                                    {renderChart(msg.data)}
-                                    <table className="data-table">
-                                        <thead>
-                                            <tr>
-                                                <th>客戶 ID</th>
-                                                <th>總消費金額</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {msg.data.map((item, idx) => (
-                                                <tr key={idx}>
-                                                    <td>{item.client_id}</td>
-                                                    <td>{item.total_amount}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </>
-                            )}
-                        </motion.div>
-                    ))}
-                    {isLoading && (
-                        <motion.div 
-                            className="message abby-message loading"
-                            animate={{ opacity: [0.5, 1, 0.5] }}
-                            transition={{ 
-                                duration: 1.5, 
-                                repeat: Infinity 
-                            }}
-                        >
-                            分析中...
-                        </motion.div>
-                    )}
-                </div>
-                <form onSubmit={handleSubmit} className="chat-input">
-                    <input
-                        type="text"
-                        placeholder="輸入您的問題..."
-                        value={userQuery}
-                        onChange={(e) => setUserQuery(e.target.value)}
-                    />
-                    <button type="submit" disabled={isLoading}>
-                        {isLoading ? '處理中' : '送出'}
-                    </button>
-                </form>
-            </div>
-        </motion.div>
+          <motion.div 
+              className="home-container"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+          >
+              <div className="chat-window">
+                  <div className="chat-header">
+                      <div className="status-indicator"></div>
+                      <div className="app-name">Abby 分析助手</div>
+                  </div>
+                  <div className="chat-display" ref={chatDisplayRef}>
+                      {messages.map((msg, index) => (
+                          <motion.div 
+                              key={index} 
+                              className={`message ${msg.type}-message`}
+                              initial={{ opacity: 0, y: 20 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              transition={{ duration: 0.3 }}
+                          >
+                              <div className="message-text">{msg.text}</div>
+                              {msg.data && msg.data.length > 0 && msg.chartType && (
+                                  <div ref={chartRef} className="chart-container"></div>
+                              )}
+                          </motion.div>
+                      ))}
+                      {isLoading && (
+                          <motion.div 
+                              className="message abby-message loading"
+                              animate={{ opacity: [0.5, 1, 0.5] }}
+                              transition={{ 
+                                  duration: 1.5, 
+                                  repeat: Infinity 
+                              }}
+                          >
+                              分析中...
+                          </motion.div>
+                      )}
+                  </div>
+                  <form onSubmit={handleSubmit} className="chat-input">
+                      <input
+                          type="text"
+                          placeholder="输入：长条图、饼图、折线图、散点图"
+                          value={userQuery}
+                          onChange={(e) => setUserQuery(e.target.value)}
+                      />
+                      <button type="submit" disabled={isLoading}>
+                          {isLoading ? '处理中' : '发送'}
+                      </button>
+                  </form>
+              </div>
+          </motion.div>
+          </Draggable>
+            <SideBar side="right" />
+        </div>
     );
 }
 

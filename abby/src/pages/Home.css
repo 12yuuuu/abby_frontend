@@ -7,30 +7,70 @@
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Noto Sans TC', sans-serif;
   background: linear-gradient(135deg, #e0e4e8 0%, #f8f9fa 100%);
   margin: 0;
   color: var(--text-primary);
+  overflow: hidden;
+}
+
+.app-container {
+  display: flex;
+  height: 100vh;
+  position: relative;
+}
+
+.sidebar {
+  width: 250px;
+  background-color: rgba(10, 25, 47, 0.8);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+}
+
+.left-sidebar {
+  border-right: 1px solid rgba(100, 221, 255, 0.2);
+}
+
+.right-sidebar {
+  border-left: 1px solid rgba(100, 221, 255, 0.2);
+}
+
+.sidebar h3 {
+  color: #64ffda;
+  margin-bottom: 15px;
+  font-size: 1.2rem;
+}
+
+.sidebar p {
+  color: #8892b0;
+  margin: 10px 0;
+  font-size: 0.9rem;
 }
 
 .home-container {
+  flex-grow: 1;
   display: flex;
   justify-content: center;
   align-items: center;
   min-height: 100vh;
   padding: 20px;
   box-sizing: border-box;
+  z-index: 10;
+  position: relative;
 }
 
 .chat-window {
-  width: 600px;
+  width: 75vw;
   height: 85vh;
   background: white;
-  border-radius: 15px;
+  border-radius: 10px;
   box-shadow: 0 20px 40px rgba(0,0,0,0.1);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  backdrop-filter: blur(10px);
 }
 
 .chat-header {
@@ -39,6 +79,11 @@ body {
   padding: 15px;
   text-align: center;
   font-weight: 600;
+  cursor: move;
+  display: flex;
+  align-items: center;
+  border-top-left-radius: 10px;
+  border-top-right-radius: 10px;
 }
 
 .chat-display {
@@ -69,6 +114,8 @@ body {
   align-self: flex-start;
   background: var(--abby-message);
   color: var(--text-primary);
+  max-width: 95%; /* 增加訊息框寬度 */
+  width: fit-content;
 }
 
 .data-table {
@@ -82,6 +129,15 @@ body {
   border: 1px solid #e0e0e0;
   padding: 8px;
   text-align: left;
+}
+
+/* 圖表背景調整 */
+.recharts-surface {
+  background-color: white !important;
+}
+
+.recharts-wrapper {
+  background-color: white !important;
 }
 
 .chat-input {
