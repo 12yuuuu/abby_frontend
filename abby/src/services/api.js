@@ -8,8 +8,11 @@ const api = axios.create({
 // 發送分析請求
 export const analyzeData = async (userQuery) => {
     try {
-        const response = await api.post('/analyze', { user_query: userQuery });
-        return response.data;
+        const postResponse = await api.post('/agent', { query: userQuery });
+        const { id } = postResponse.data;
+
+        const getResponse = await api.get(`/agent/${id}`);
+        return getResponse.data;
     } catch (error) {
         console.error('Error analyzing data:', error);
         throw error;

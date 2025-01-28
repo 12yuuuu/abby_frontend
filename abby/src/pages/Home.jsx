@@ -3,59 +3,60 @@ import { Chart } from '@antv/g2';
 import { motion } from 'framer-motion';
 import Draggable from 'react-draggable';
 import { Auto } from '@antv/g2-extension-ava';
+import { analyzeData } from '../services/api';
 import './Home.css';
 
 // 科技背景动画组件
-// const TechBackground = () => {
-//   const [lines, setLines] = useState([]);
+const TechBackground = () => {
+  const [lines, setLines] = useState([]);
 
-//   useEffect(() => {
-//       const generateLines = () => {
-//           const lineCount = 20;
-//           const newLines = Array.from({ length: lineCount }, (_, index) => ({
-//               id: index,
-//               x1: Math.random() * 100,
-//               y1: Math.random() * 100,
-//               x2: Math.random() * 100,
-//               y2: Math.random() * 100,
-//               color: `hsl(${Math.random() * 360}, 70%, 50%)`,
-//               duration: Math.random() * 10 + 5
-//           }));
-//           setLines(newLines);
-//       };
+  useEffect(() => {
+      const generateLines = () => {
+          const lineCount = 20;
+          const newLines = Array.from({ length: lineCount }, (_, index) => ({
+              id: index,
+              x1: Math.random() * 100,
+              y1: Math.random() * 100,
+              x2: Math.random() * 100,
+              y2: Math.random() * 100,
+              color: `hsl(${Math.random() * 360}, 70%, 50%)`,
+              duration: Math.random() * 10 + 5
+          }));
+          setLines(newLines);
+      };
 
-//       generateLines();
-//       const interval = setInterval(generateLines, 5000);
-//       return () => clearInterval(interval);
-//   }, []);
+      generateLines();
+      const interval = setInterval(generateLines, 5000);
+      return () => clearInterval(interval);
+  }, []);
 
-//   return (
-//       <svg className="tech-background" style={{position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: -1}}>
-//           {lines.map(line => (
-//               <motion.line
-//                   key={line.id}
-//                   x1={`${line.x1}%`}
-//                   y1={`${line.y1}%`}
-//                   x2={`${line.x2}%`}
-//                   y2={`${line.y2}%`}
-//                   stroke={line.color}
-//                   strokeWidth="1"
-//                   strokeOpacity="0.5"
-//                   animate={{
-//                       x1: [line.x1, line.x2, line.x1],
-//                       y1: [line.y1, line.y2, line.y1],
-//                       strokeOpacity: [0.3, 0.7, 0.3]
-//                   }}
-//                   transition={{
-//                       duration: line.duration,
-//                       repeat: Infinity,
-//                       ease: "easeInOut"
-//                   }}
-//               />
-//           ))}
-//       </svg>
-//   );
-// };
+  return (
+      <svg className="tech-background" style={{position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', zIndex: -1}}>
+          {lines.map(line => (
+              <motion.line
+                  key={line.id}
+                  x1={`${line.x1}%`}
+                  y1={`${line.y1}%`}
+                  x2={`${line.x2}%`}
+                  y2={`${line.y2}%`}
+                  stroke={line.color}
+                  strokeWidth="1"
+                  strokeOpacity="0.5"
+                  animate={{
+                      x1: [line.x1, line.x2, line.x1],
+                      y1: [line.y1, line.y2, line.y1],
+                      strokeOpacity: [0.3, 0.7, 0.3]
+                  }}
+                  transition={{
+                      duration: line.duration,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                  }}
+              />
+          ))}
+      </svg>
+  );
+};
 
 // 说明侧边栏组件
 const SideBar = ({ side }) => {
@@ -95,32 +96,10 @@ function Home() {
     const [messages, setMessages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [position, setPosition] = useState({ x: 0, y: 0 });
+    const [salesData, setSalesData] = useState([]); // State to store dynamic sales data
+    const [analysisText, setAnalysisText] = useState(""); // State to store analysis text
     const chatDisplayRef = useRef(null);
     const chartRef = useRef(null);
-
-    // 预定义销售数据
-    const salesData = [
-        {'client_id': 1, 'total_amount': 9423.0}, 
-        {'client_id': 2, 'total_amount': 8992.0}, 
-        {'client_id': 3, 'total_amount': 5185.0},
-        {'client_id': 4, 'total_amount': 7256.0}, 
-        {'client_id': 5, 'total_amount': 5847.0},
-        {'client_id': 6, 'total_amount': 6982.0},
-        {'client_id': 7, 'total_amount': 8321.0},
-        {'client_id': 8, 'total_amount': 7492.0},
-        {'client_id': 9, 'total_amount': 9213.0},
-        {'client_id': 10, 'total_amount': 6178.0},
-        {'client_id': 11, 'total_amount': 8153.0},
-        {'client_id': 12, 'total_amount': 6782.0},
-        {'client_id': 13, 'total_amount': 7512.0},
-        {'client_id': 14, 'total_amount': 6482.0},
-        {'client_id': 15, 'total_amount': 8123.0},
-        {'client_id': 16, 'total_amount': 6982.0},
-        {'client_id': 17, 'total_amount': 7321.0},
-        {'client_id': 18, 'total_amount': 6492.0},
-        {'client_id': 19, 'total_amount': 7213.0},
-        {'client_id': 20, 'total_amount': 6178.0}
-    ];
 
     const renderBarChart = (data) => {
         if (chartRef.current) {
@@ -313,43 +292,78 @@ function Home() {
         setMessages(prevMessages => [...prevMessages, newUserMessage]);
         setUserQuery("");
         setIsLoading(true);
+        setAnalysisText("");
 
-        setTimeout(() => {
-            let responseMessage = {
+        try {
+            console.log('Sending request with query:', userQuery.trim());
+            const response = await analyzeData(userQuery.trim());
+            console.log('Received response:', response);
+
+            const responseMessage = {
                 type: 'abby',
-                data: salesData
+                text: response.analysis, // 回應的分析文本
+                data: response.data,    // 回應的數據
             };
 
-            switch(userQuery.trim()) {
-                case '长条图':
-                    responseMessage.text = "销售数据长条图";
-                    responseMessage.chartType = 'barChart';
-                    break;
-                case '饼图':
-                    responseMessage.text = "销售数据饼图";
-                    responseMessage.chartType = 'pieChart';
-                    break;
-                case '折线图':
-                    responseMessage.text = "销售数据折线图";
-                    responseMessage.chartType = 'lineChart';
-                    break;
-                case '散点图':
-                    responseMessage.text = "销售数据散点图";
-                    responseMessage.chartType = 'scatterPlot';
-                    break;
-                default:
-                    responseMessage.text = "未知的查询类型";
-                    responseMessage.chartType = null;
-            }
+            // 根據查詢類型設置圖表類型
+            const queryMap = {
+                '我想比較所有客户的消费总金额': {
+                    chartType: 'barChart'
+                },
+                '我想知道各个客户的付款方式占比': {
+                    chartType: 'pieChart'
+                },
+                '我想了解各个月的消费金额趋势': {
+                    chartType: 'lineChart'
+                },
+                '我想比較不同用户在不同产品之间的消费数量': {
+                    chartType: 'scatterPlot'
+                }
+            };
 
+            const queryConfig = queryMap[userQuery.trim()] || {
+                text: "抱歉，不理解你的問題",
+                chartType: null
+            };
+
+            responseMessage = {
+                ...responseMessage,
+                text: queryConfig.text,
+                chartType: queryConfig.chartType
+            };
+
+             // 更新狀態
+             console.log('Updating state with:', {
+                salesData: response.data,
+                analysisText: response.analysis,
+                responseMessage
+            });
+
+            setSalesData(response.data);
+            setAnalysisText(response.analysis);
             setMessages(prevMessages => [...prevMessages, responseMessage]);
+        
+          } catch (error) {
+            console.error('Error in handleSubmit:', {
+                error,
+                message: error.message,
+                stack: error.stack
+            });
+
+            const errorMessage = {
+                type: 'abby',
+                text: `處理請求時出錯：${error.message}`
+            };
+            setMessages(prevMessages => [...prevMessages, errorMessage]);
+        } finally {
             setIsLoading(false);
-        }, 500);
+        }
     };
 
     useEffect(() => {
         const lastMessage = messages[messages.length - 1];
         if (lastMessage && lastMessage.data && lastMessage.chartType) {
+            console.log('Rendering chart with data:', lastMessage.data);
             renderChart(lastMessage.data, lastMessage.chartType);
         }
     }, [messages]);
@@ -365,71 +379,76 @@ function Home() {
     };
 
     return (
-        <div className="app-container">
-        {/* <TechBackground /> */}
-        <SideBar side="left" />
-        <Draggable 
-            handle=".chat-header"
-            defaultPosition={{x: 0, y: 0}}
-            position={position}
-            onDrag={handleDrag}
+      <div className="app-container">
+      <TechBackground />
+      <SideBar side="left" />
+      <Draggable 
+          handle=".chat-header"
+          defaultPosition={{x: 0, y: 0}}
+          position={position}
+          onDrag={handleDrag}
+      >
+        <motion.div 
+            className="home-container"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.5 }}
         >
-          <motion.div 
-              className="home-container"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-          >
-              <div className="chat-window">
-                  <div className="chat-header">
-                      <div className="status-indicator"></div>
-                      <div className="app-name">Abby 分析助手</div>
-                  </div>
-                  <div className="chat-display" ref={chatDisplayRef}>
-                      {messages.map((msg, index) => (
-                          <motion.div 
-                              key={index} 
-                              className={`message ${msg.type}-message`}
-                              initial={{ opacity: 0, y: 20 }}
-                              animate={{ opacity: 1, y: 0 }}
-                              transition={{ duration: 0.3 }}
-                          >
-                              <div className="message-text">{msg.text}</div>
-                              {msg.data && msg.data.length > 0 && msg.chartType && (
-                                  <div ref={chartRef} className="chart-container"></div>
-                              )}
-                          </motion.div>
-                      ))}
-                      {isLoading && (
-                          <motion.div 
-                              className="message abby-message loading"
-                              animate={{ opacity: [0.5, 1, 0.5] }}
-                              transition={{ 
-                                  duration: 1.5, 
-                                  repeat: Infinity 
-                              }}
-                          >
-                              分析中...
-                          </motion.div>
-                      )}
-                  </div>
-                  <form onSubmit={handleSubmit} className="chat-input">
-                      <input
-                          type="text"
-                          placeholder="输入：长条图、饼图、折线图、散点图"
-                          value={userQuery}
-                          onChange={(e) => setUserQuery(e.target.value)}
-                      />
-                      <button type="submit" disabled={isLoading}>
-                          {isLoading ? '处理中' : '发送'}
-                      </button>
-                  </form>
-              </div>
-          </motion.div>
-          </Draggable>
-            <SideBar side="right" />
-        </div>
-    );
+            <div className="chat-window">
+                <div className="chat-header">
+                    <div className="status-indicator"></div>
+                    <div className="app-name">Abby 分析助手</div>
+                </div>
+                <div className="chat-display" ref={chatDisplayRef}>
+                    {messages.map((msg, index) => (
+                        <motion.div 
+                            key={index} 
+                            className={`message ${msg.type}-message`}
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.3 }}
+                        >
+                            <div className="message-text">{msg.text}</div>
+                            {msg.data && msg.data.length > 0 && msg.chartType && (
+                                <>
+                                    <div ref={chartRef} className="chart-container"></div>
+                                    {analysisText && (
+                                        <div className="analysis-text">{analysisText}</div>
+                                    )}
+                                </>
+                            )}
+                        </motion.div>
+                    ))}
+                    {isLoading && (
+                        <motion.div 
+                            className="message abby-message loading"
+                            animate={{ opacity: [0.5, 1, 0.5] }}
+                            transition={{ 
+                                duration: 1.5, 
+                                repeat: Infinity 
+                            }}
+                        >
+                            分析中...
+                        </motion.div>
+                    )}
+                </div>
+                <form onSubmit={handleSubmit} className="chat-input">
+                    <input
+                        type="text"
+                        placeholder="输入你的问题"
+                        value={userQuery}
+                        onChange={(e) => setUserQuery(e.target.value)}
+                    />
+                    <button type="submit" disabled={isLoading}>
+                        {isLoading ? '处理中' : '发送'}
+                    </button>
+                </form>
+            </div>
+        </motion.div>
+        </Draggable>
+          <SideBar side="right" />
+      </div>
+  );
 }
 
 export default Home;
