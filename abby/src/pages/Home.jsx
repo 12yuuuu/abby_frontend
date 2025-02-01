@@ -96,8 +96,6 @@ function Home() {
     const [messages, setMessages] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [position, setPosition] = useState({ x: 0, y: 0 });
-    const [salesData, setSalesData] = useState([]); // State to store dynamic sales data
-    const [analysisText, setAnalysisText] = useState(""); // State to store analysis text
     const chatDisplayRef = useRef(null);
     const chartRef = useRef(null);
 
@@ -292,81 +290,52 @@ function Home() {
         setMessages(prevMessages => [...prevMessages, newUserMessage]);
         setUserQuery("");
         setIsLoading(true);
-        setAnalysisText("");
 
         try {
-            console.log('Sending request with query:', userQuery.trim());
-            const response = await analyzeData(userQuery.trim());
-            console.log('Received response:', response);
-
-            const responseMessage = {
-                type: 'abby',
-                text: response.analysis, // 回應的分析文本
-                data: response.data,    // 回應的數據
-            };
-
-            // 根據查詢類型設置圖表類型
+            // 根據查詢類型判斷圖表類型
             const queryMap = {
-                '我想比較所有客户的消费总金额': {
-                    chartType: 'barChart'
-                },
-                '我想知道各个客户的付款方式占比': {
-                    chartType: 'pieChart'
-                },
-                '我想了解各个月的消费金额趋势': {
-                    chartType: 'lineChart'
-                },
-                '我想比較不同用户在不同产品之间的消费数量': {
-                    chartType: 'scatterPlot'
+                '我想比較所有客户的消费总金额': 'barChart',
+                '我想知道各个客户的付款方式占比': 'pieChart',
+                '我想了解各个月的消费金额趋势': 'lineChart',
+                '我想比較不同用户在不同产品之间的消费数量': 'scatterPlot'
+            };
+
+            const chartType = queryMap[userQuery.trim()] || 'barChart';
+
+            // 發送請求並獲取回應
+            const response = await analyzeData(userQuery.trim());
+            
+            if (response && response.analysis && response.data) {
+                const responseMessage = {
+                    type: 'abby',
+                    text: response.analysis,
+                    data: response.data,
+                    chartType: chartType
+                };
+
+                setMessages(prevMessages => [...prevMessages, responseMessage]);
+
+                // 如果有數據就渲染圖表
+                if (response.data.length > 0) {
+                    renderChart(response.data, chartType);
                 }
-            };
-
-            const queryConfig = queryMap[userQuery.trim()] || {
-                text: "抱歉，不理解你的問題",
-                chartType: null
-            };
-
-            responseMessage = {
-                ...responseMessage,
-                text: queryConfig.text,
-                chartType: queryConfig.chartType
-            };
-
-             // 更新狀態
-             console.log('Updating state with:', {
-                salesData: response.data,
-                analysisText: response.analysis,
-                responseMessage
-            });
-
-            setSalesData(response.data);
-            setAnalysisText(response.analysis);
-            setMessages(prevMessages => [...prevMessages, responseMessage]);
-        
-          } catch (error) {
-            console.error('Error in handleSubmit:', {
-                error,
-                message: error.message,
-                stack: error.stack
-            });
-
+            } else {
+                throw new Error('Invalid response format');
+            }
+        } catch (error) {
+            console.error('Error in handleSubmit:', error);
+            
             const errorMessage = {
                 type: 'abby',
                 text: `處理請求時出錯：${error.message}`
             };
+            
             setMessages(prevMessages => [...prevMessages, errorMessage]);
         } finally {
             setIsLoading(false);
         }
     };
 
-    useEffect(() => {
-        const lastMessage = messages[messages.length - 1];
-        if (lastMessage && lastMessage.data && lastMessage.chartType) {
-            console.log('Rendering chart with data:', lastMessage.data);
-            renderChart(lastMessage.data, lastMessage.chartType);
-        }
-    }, [messages]);
 
     useEffect(() => {
         if (chatDisplayRef.current) {
