@@ -1,72 +1,92 @@
 import axios from "axios";
 
-// 創建 axios 實例
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_URL,
 });
 
-// 發送分析請求
 export const analyzeData = async (userQuery) => {
     try {
-        // 首先發送 POST 請求
-        const postResponse = await api.post('/agent', {
-            query: userQuery,
-            // 確保發送所有必要的欄位
-            id: undefined  // 讓後端生成 ID
+        const response = await api.post('/agent', {
+            query: userQuery  // 修正：直接傳送 query 參數
         });
         
-        // 確保我們有得到 ID
-        if (!postResponse.data || !postResponse.data.id) {
-            throw new Error('No ID received from POST request');
-        }
-
-        // 使用收到的 ID 發送 GET 請求
-        const getResponse = await api.get(`/agent/${postResponse.data.id}`);
-        
-        // 檢查響應格式
-        if (!getResponse.data || !getResponse.data.analysis || !getResponse.data.data) {
-            throw new Error('Invalid response format from GET request');
+        if (!response.data) {
+            throw new Error('No response data received');
         }
 
         return {
-            analysis: getResponse.data.analysis,
-            data: getResponse.data.data
+            analysis: response.data.analysis,
+            data: response.data.data
         };
     } catch (error) {
-        // 更詳細的錯誤處理
+        let errorMessage = '發生未知錯誤';
+        let errorDetails = '';
+
         if (error.response) {
-            // 服務器回應了錯誤狀態碼
-            console.error('Server Error:', error.response.data);
-            throw new Error(error.response.data.message || '服務器錯誤');
+            // 服務器回應的錯誤
+            errorMessage = error.response.data.message || '服務器錯誤';
+            errorDetails = `狀態碼: ${error.response.status}\n` +
+                         `錯誤詳情: ${JSON.stringify(error.response.data)}\n` +
+                         `請求 URL: ${error.config.url}\n` +
+                         `請求數據: ${JSON.stringify(error.config.data)}`;
         } else if (error.request) {
-            // 請求已發送但沒有收到回應
-            console.error('No Response:', error.request);
-            throw new Error('無法連接到服務器');
+            // 請求發送但沒有收到回應
+            errorMessage = '無法連接到服務器';
+            errorDetails = `請求詳情: ${JSON.stringify(error.request)}`;
         } else {
             // 請求設置時發生錯誤
-            console.error('Request Error:', error.message);
-            throw error;
+            errorMessage = error.message;
+            errorDetails = error.stack;
         }
+
+        console.error('API Error:', {
+            message: errorMessage,
+            details: errorDetails,
+            error: error
+        });
+
+        throw {
+            message: errorMessage,
+            details: errorDetails,
+            originalError: error
+        };
     }
 };
 
-// 添加請求攔截器
+// 更新請求攔截器以包含錯誤追蹤
 api.interceptors.request.use(
     config => {
-        // 添加必要的headers
+        console.log('Request:', {
+            url: config.url,
+            method: config.method,
+            headers: config.headers,
+            data: config.data
+        });
         config.headers['Content-Type'] = 'application/json';
         return config;
     },
     error => {
+        console.error('Request Interceptor Error:', error);
         return Promise.reject(error);
     }
 );
 
-// 添加響應攔截器
+// 更新響應攔截器以包含詳細日誌
 api.interceptors.response.use(
-    response => response,
+    response => {
+        console.log('Response:', {
+            status: response.status,
+            data: response.data,
+            headers: response.headers
+        });
+        return response;
+    },
     error => {
-        console.error('API Error:', error);
+        console.error('Response Interceptor Error:', {
+            config: error.config,
+            response: error.response,
+            message: error.message
+        });
         return Promise.reject(error);
     }
 );

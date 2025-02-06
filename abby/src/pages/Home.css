@@ -39,7 +39,7 @@ body {
 }
 
 .sidebar h3 {
-  color: #64beffbc;
+  color: #64f7ff;
   margin-bottom: 15px;
   font-size: 1.2rem;
 }
@@ -169,3 +169,29 @@ body {
   font-style: italic;
   color: #7f8c8d;
 }
+
+.error-details {
+  margin-top: 10px;
+  padding: 10px;
+  background-color: rgba(255, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+.error-title {
+  color: #ff4444;
+  margin-bottom: 5px;
+  font-weight: bold;
+}
+
+.error-content {
+  font-family: monospace;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  background-color: rgba(0, 0, 0, 0.05);
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
